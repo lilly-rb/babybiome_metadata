@@ -1,1 +1,20 @@
-metadata_processing_testing.ipynb
+# Temporary and binary files
+*~
+*.py[cod]
+*.log
+__pycache__/*
+.cache/*
+*/.ipynb_checkpoints/*
+.DS_Store
+
+# Project files
+*_testing.ipynb
+.vscode
+
+# Unittest and coverage
+.pytest_cache/
+
+# Per-project virtualenvs
+.venv*/
+.conda*/
+.python-version
