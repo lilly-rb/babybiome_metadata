@@ -3,7 +3,7 @@
 
 ''' Extraction and transformation of the family metadata baby sheets (time point specific) from the babybiome project
     @Author: LRB
-    @Date: 07.02.2025'''
+    @Date: 12.02.2025'''
 
 import pandas as pd
 import numpy as np
@@ -80,5 +80,127 @@ def prepare_baby_sheet(sheet_path: str, sheet: str, renaming_path: str, deleting
     df = add_info_cols(df, sheet)
     df = set_col_names(df, renaming_path)
     df = deleting_cols(df, deleting_path)
+
+    return df
+
+def merge_babies(df_list: list):
+    return pd.concat(df_list, axis = 0, ignore_index = True)
+
+def run_through_babies(first: int, last: int, skips: list, path: str, renaming_path: str, deleting_path: str):
+
+    babies_list = []
+
+    for i in range(first, last + 1):
+        if i in skips:
+            continue
+        sheet = f'B{i:03}'
+        df = prepare_baby_sheet(path, sheet, renaming_path, deleting_path)
+        babies_list.append(df)
+    
+    return merge_babies(babies_list)
+
+def edit_probiotics(df: pd.DataFrame):
+
+    probiotics_m = pd.Series(df['probiotics_notes'].str.contains(r'mutter', case = False), name = 'probiotics_mother')
+    probiotics_s = pd.Series(df['probiotics_notes'].str.contains(r'kind', case = False), name = 'probiotics_sib1')
+    probiotics_f = pd.Series(df['probiotics_notes'].str.contains(r'vater', case = False), name = 'probiotics_father')
+    probiotics_b = pd.Series(df['probiotics_notes'].str.contains(r'baby', case = False), name = 'probiotics_baby1')
+
+    probiotics_bifido = pd.Series(df["probiotics_notes"].str.contains(r"[\S\s]*bifido[\S\s]*", case = False, regex = True), name = "probiotics_bifido")
+    probiotics_lakt = pd.Series(df["probiotics_notes"].str.contains(r"[\S\s]*lakt[\S\s]*", case = False, regex = True), name = "probiotics_lakt")
+    probiotics_ecoli = pd.Series(df["probiotics_notes"].str.contains(r"[\S\s]*coli[\S\s]*", case = False, regex = True), name = "probiotics_e_coli")
+
+    return pd.concat([df, probiotics_b, probiotics_bifido, probiotics_ecoli, probiotics_f, probiotics_lakt, probiotics_m, probiotics_s], axis = 1)
+
+def feeding_mode_conditional(row):
+
+    mode = []
+    if row['breastfed_baby1']:
+        mode.append('breastfed')
+    if row['formula_baby1']:
+        mode.append('formula')
+    if row['solids_baby1']:
+           mode.append('solids')
+    
+    return mode
+
+def edit_baby_feeding_mode(df: pd.DataFrame):
+
+    # doing this for only baby1 under the assumption twins are fed identically
+    temp_baby1 = pd.Series(df['food_baby1'].astype(str) + df['food_baby1_notes'].astype(str)) # this changes na values... 
+
+    bf_baby1 = pd.Series(temp_baby1.str.contains(r'gestil', case = False), name = 'breastfed_baby1')
+    formula_baby1 = pd.Series(temp_baby1.str.contains(r'milch|pre|aptamil', case = False, regex = True), name = 'formula_baby1')
+    solids_baby1 = pd.Series(temp_baby1.str.contains(r'beikost|brei', case = False, regex = True), name = 'solids_baby1')
+
+    df = pd.concat([df, bf_baby1, formula_baby1, solids_baby1], axis = 1)
+
+    df['feeding_mode'] = df.apply(feeding_mode_conditional, axis = 1)
+
+    return df
+
+def baby_diet_condition(row):
+
+    diet = []
+    notes = row['temp'].lower()
+
+    if 'fleisch' in notes:
+        diet.append('less meat')
+    if 'vege' in notes:
+        diet.append('vegetarian')
+    if 'vega' in notes:
+        diet.append('vegan')
+    if 'salz' in notes:
+        diet.append('less salt')
+    if 'zucker' in notes:
+        diet.append('low sugar')
+    if 'carb' in notes:
+        diet.append('low carb')
+    if 'eiwei' in notes:
+        diet.append('little egg???')
+    
+    return diet
+
+def edit_baby_diet(df: pd.DataFrame):
+
+    # works under the assumption that diet with twins is equal!
+    df['temp'] = df['food_baby1'].astype(str) + df['food_baby2'].astype(str) + df['food_baby1_notes'].astype(str) + df['food_baby2_notes'].astype(str) + df['diet_baby'].astype(str) + df['diet_baby_notes'].astype(str)
+    df['special_diet_baby'] = df.apply(baby_diet_condition, axis = 1)
+    df.drop('temp', axis = 1, inplace = True)
+
+    return df
+
+def replacing_values(df: pd.DataFrame):
+
+    replace = ['.*[Jj][Aa].*', '.*[Nn][Ee][Ii][Nn].*', '.*[Jj]eden.*', '.*[Hh]öchstens.*', '.*[Mm]ehrmal.*']
+    val = ['True', 'False', 'min. once per day', 'max. once per week', 'several times a week']
+    
+    for i in range(len(replace)):
+        df = df.replace(to_replace = replace[i], regex = True, value = val[i])
+
+    return df
+
+def col_type_changes(df: pd.DataFrame):
+    return df.convert_dtypes()
+
+def edit_travel_time(df: pd.DataFrame):
+
+    father = pd.Series(df['probe_date_mpi'] - df['probe_date_father'], name = 'travel_time_mother')
+    mother = pd.Series(df['probe_date_mpi'] - df['probe_date_mother'], name = 'travel_time_father')
+    sib1 = pd.Series(df['probe_date_mpi'] - df['probe_date_sib1'], name = 'travel_time_sib1')
+    sib2 = pd.Series(df['probe_date_mpi'] - df['probe_date_sib2'], name = 'travel_time_sib2')
+    baby1 = pd.Series(df['probe_date_mpi'] - df['probe_date_baby1'], name = 'travel_time_baby1')
+    baby2 = pd.Series(df['probe_date_mpi'] - df['probe_date_baby2'], name = 'travel_time_baby2')
+
+    return pd.concat([df, father, mother, sib1, sib2, baby1, baby2], axis = 1)
+
+def clean_and_edit(df: pd.DataFrame):
+    
+    df = edit_baby_diet(df)
+    df = edit_baby_feeding_mode(df)
+    df = edit_probiotics(df)
+    df = replacing_values(df)
+    df = col_type_changes(df)
+    df = edit_travel_time(df)
 
     return df
