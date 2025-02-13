@@ -6,7 +6,7 @@
     @Date: 12.02.2025'''
 
 import pandas as pd
-import numpy as np
+from datetime import date
 import openpyxl
 
 def load_baby_sheet(path: str, sheet: str):
@@ -42,9 +42,15 @@ def rough_clean(df: pd.DataFrame):
 def add_info_cols(df: pd.DataFrame, sheet: str):
 
     # baby col
-    baby = pd.Series(["Baby"] + [sheet] * (df.shape[0]-1))
+    baby = pd.Series(["baby"] + [sheet] * (df.shape[0]-1))
     # timepoint col (categorical)
-    df.iloc[:, 0] = df.iloc[:, 0].str.replace('Fragebogen ', "")
+    df.iloc[:, 0] = df.iloc[:, 0].str.replace('Fragebogen ', '')
+    df.iloc[:, 0] = df.iloc[:, 0].str.replace('"', '')
+    df.iloc[:, 0] = df.iloc[:, 0].str.replace(' ', '')
+    df.iloc[:, 0] = df.iloc[:, 0].str.split('Ver', n = 1).str[0]
+    df.iloc[:, 0] = df.iloc[:, 0].str.split('wied', n = 1).str[0]
+    df.iloc[:, 0] = df.iloc[:, 0].str.split('Gebu', n = 1).str[0]
+
     df.iloc[0, 0] = 'time_point'
 
     df.reset_index(inplace = True, drop = True)
@@ -185,14 +191,25 @@ def col_type_changes(df: pd.DataFrame):
 
 def edit_travel_time(df: pd.DataFrame):
 
-    father = pd.Series(df['probe_date_mpi'] - df['probe_date_father'], name = 'travel_time_mother')
-    mother = pd.Series(df['probe_date_mpi'] - df['probe_date_mother'], name = 'travel_time_father')
-    sib1 = pd.Series(df['probe_date_mpi'] - df['probe_date_sib1'], name = 'travel_time_sib1')
-    sib2 = pd.Series(df['probe_date_mpi'] - df['probe_date_sib2'], name = 'travel_time_sib2')
-    baby1 = pd.Series(df['probe_date_mpi'] - df['probe_date_baby1'], name = 'travel_time_baby1')
-    baby2 = pd.Series(df['probe_date_mpi'] - df['probe_date_baby2'], name = 'travel_time_baby2')
+    father = pd.Series((df['probe_date_mpi'] - df['probe_date_father']).dt.days, name = 'travel_time_mother')
+    mother = pd.Series((df['probe_date_mpi'] - df['probe_date_mother']).dt.days, name = 'travel_time_father')
+    sib1 = pd.Series((df['probe_date_mpi'] - df['probe_date_sib1']).dt.days, name = 'travel_time_sib1')
+    sib2 = pd.Series((df['probe_date_mpi'] - df['probe_date_sib2']).dt.days, name = 'travel_time_sib2')
+    baby1 = pd.Series((df['probe_date_mpi'] - df['probe_date_baby1']).dt.days, name = 'travel_time_baby1')
+    baby2 = pd.Series((df['probe_date_mpi'] - df['probe_date_baby2']).dt.days, name = 'travel_time_baby2')
+
 
     return pd.concat([df, father, mother, sib1, sib2, baby1, baby2], axis = 1)
+
+def removing_duplicates(df: pd.DataFrame):
+
+    # for now hard-coded removal of duplicates/retaken samples 
+    df = df[~((df['baby']=='B001')&(df['probe_date_mpi'].notna())&(df['time_point']=='9Monate'))]
+    df = df[~((df['baby']=='B016')&(df['time_point']=='12Monate'))]
+    df = df[~((df['baby']=='B027')&(df['time_point']=='12Monate'))]
+    df = df[~((df['baby']=='B034')&(df['weight_mother']==75))] # note that this is a strange duplicate with fixed samples and variable samples separated, this is keeping the variable version
+
+    return df
 
 def clean_and_edit(df: pd.DataFrame):
     
@@ -202,5 +219,11 @@ def clean_and_edit(df: pd.DataFrame):
     df = replacing_values(df)
     df = col_type_changes(df)
     df = edit_travel_time(df)
+    df = removing_duplicates(df)
 
     return df
+
+def save_baby_sheets(df: pd.DataFrame, path: str):
+    
+    today = date.today().strftime('%Y%m%d')
+    df.to_csv(f'{path}{today}_baby_sheets.csv', index = False)
