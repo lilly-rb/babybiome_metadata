@@ -1,0 +1,14 @@
+﻿categorical;months;days;weeks;abbreviated;number
+vor;-1;-1;-1;vor;1
+2Wochen;0,5;14;2;2W;2
+4Wochen;1;28;4;4W;3
+2Monate;2;60,8;8,7;2M;4
+3Monate;3;91,3;13;3M;5
+5Monate;5;152,1;21,7;5M;10
+6Monate;6;182,5;26,1;6M;6
+9Monate;9;273,8;39,1;9M;7
+12Monate;12;365;52;12M;8
+13Monate;13;395,4;56,5;13M;11
+14Monate;14;425,8;60,8;14M;12
+17Monate;17;517,1;73,9;17M;13
+24Monate;24;730;104,3;24M;9

@@ -1,15 +1,15 @@
 CREATE TABLE "time_conversions" (
   "categorical" varchar,
-  "days" int,
+  "days" number,
   "months" number,
-  "weeks" int
+  "weeks" number,
+  "abbreviated" varchar
 );
 
 CREATE TABLE "member_conversions" (
   "one_letter" char(1),
   "number" int,
-  "spelled" varchar,
-  "abbreviated" varchar
+  "spelled" varchar
 );
 
 CREATE TABLE "collected_samples" (
@@ -38,7 +38,6 @@ CREATE TABLE "probiotics" (
   "bifido" bool,
   "ecoli" bool,
   "lakt" bool,
-  "species" varchar,
   "notes" text
 );
 
@@ -57,7 +56,6 @@ CREATE TABLE "baby_health" (
   "weight" number,
   "height" number,
   "illness" text,
-  "latest_u" text,
   "latest_u_results" text,
   "hospital" text
 );

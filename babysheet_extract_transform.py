@@ -109,14 +109,16 @@ def edit_probiotics(df: pd.DataFrame):
 
     probiotics_m = pd.Series(df['probiotics_notes'].str.contains(r'mutter', case = False), name = 'probiotics_mother')
     probiotics_s = pd.Series(df['probiotics_notes'].str.contains(r'kind', case = False), name = 'probiotics_sib1')
+    probiotics_t = pd.Series(df['probiotics_notes'].str.contains(r'child', case = False), name = 'probiotics_sib2')
     probiotics_f = pd.Series(df['probiotics_notes'].str.contains(r'vater', case = False), name = 'probiotics_father')
     probiotics_b = pd.Series(df['probiotics_notes'].str.contains(r'baby', case = False), name = 'probiotics_baby1')
+    probiotics_c = pd.Series(df['probiotics_notes'].str.contains(r'infant', case = False), name = 'probiotics_baby2')
 
     probiotics_bifido = pd.Series(df["probiotics_notes"].str.contains(r"[\S\s]*bifido[\S\s]*", case = False, regex = True), name = "probiotics_bifido")
     probiotics_lakt = pd.Series(df["probiotics_notes"].str.contains(r"[\S\s]*lakt[\S\s]*", case = False, regex = True), name = "probiotics_lakt")
     probiotics_ecoli = pd.Series(df["probiotics_notes"].str.contains(r"[\S\s]*coli[\S\s]*", case = False, regex = True), name = "probiotics_e_coli")
 
-    return pd.concat([df, probiotics_b, probiotics_bifido, probiotics_ecoli, probiotics_f, probiotics_lakt, probiotics_m, probiotics_s], axis = 1)
+    return pd.concat([df, probiotics_b, probiotics_bifido, probiotics_ecoli, probiotics_f, probiotics_lakt, probiotics_m, probiotics_s, probiotics_t, probiotics_c], axis = 1)
 
 def feeding_mode_conditional(row):
 
@@ -148,7 +150,7 @@ def edit_baby_feeding_mode(df: pd.DataFrame):
 def baby_diet_condition(row):
 
     diet = []
-    notes = row['temp'].lower()
+    notes = row['special_diet_baby_notes'].lower()
 
     if 'fleisch' in notes:
         diet.append('less meat')
@@ -170,9 +172,8 @@ def baby_diet_condition(row):
 def edit_baby_diet(df: pd.DataFrame):
 
     # works under the assumption that diet with twins is equal!
-    df['temp'] = df['food_baby1'].astype(str) + df['food_baby2'].astype(str) + df['food_baby1_notes'].astype(str) + df['food_baby2_notes'].astype(str) + df['diet_baby'].astype(str) + df['diet_baby_notes'].astype(str)
+    df['special_diet_baby_notes'] = df['food_baby1'].astype(str) + df['food_baby2'].astype(str) + df['food_baby1_notes'].astype(str) + df['food_baby2_notes'].astype(str) + df['diet_baby'].astype(str) + df['diet_baby_notes'].astype(str)
     df['special_diet_baby'] = df.apply(baby_diet_condition, axis = 1)
-    df.drop('temp', axis = 1, inplace = True)
 
     return df
 
