@@ -3,7 +3,7 @@
 
 ''' Extraction and transformation of the family metadata baby sheets (time point specific) from the babybiome project
     @Author: LRB
-    @Date: 12.02.2025'''
+    @Date: 19.02.2025'''
 
 import pandas as pd
 from datetime import date
@@ -33,7 +33,7 @@ def load_baby_sheet_notes(path: str, sheet: str):
 def merge_normal_notes(df1: pd.DataFrame, df2: pd.DataFrame):
     return pd.concat([df1, df2], axis = 0)
 
-def rough_clean(df: pd.DataFrame):
+def rough_clean_baby(df: pd.DataFrame):
     df.drop(df.columns[0], axis = 1, inplace=True) # rids english labs
     df.dropna(thresh=2, axis = 1, inplace = True) # this drops all empty time points (they have the Frgaebogen field and nothing else)
     df.dropna(how = 'all', axis = 0, inplace = True)
@@ -82,7 +82,7 @@ def deleting_cols(df: pd.DataFrame, path: str):
 
 def prepare_baby_sheet(sheet_path: str, sheet: str, renaming_path: str, deleting_path: str):
     
-    df = rough_clean(merge_normal_notes(load_baby_sheet(sheet_path, sheet), load_baby_sheet_notes(sheet_path, sheet)))
+    df = rough_clean_baby(merge_normal_notes(load_baby_sheet(sheet_path, sheet), load_baby_sheet_notes(sheet_path, sheet)))
     df = add_info_cols(df, sheet)
     df = set_col_names(df, renaming_path)
     df = deleting_cols(df, deleting_path)
@@ -147,12 +147,12 @@ def edit_baby_feeding_mode(df: pd.DataFrame):
 
     return df
 
-def baby_diet_condition(row):
+def diet_condition(notes):
 
+    notes = notes.lower()
     diet = []
-    notes = row['special_diet_baby_notes'].lower()
 
-    if 'fleisch' in notes:
+    if 'fleischarm' in notes or 'wenig fleisch' in notes:
         diet.append('less meat')
     if 'vege' in notes:
         diet.append('vegetarian')
@@ -162,10 +162,12 @@ def baby_diet_condition(row):
         diet.append('less salt')
     if 'zucker' in notes:
         diet.append('low sugar')
-    if 'carb' in notes:
+    if 'carb' in notes or 'kohlenhydr' in notes:
         diet.append('low carb')
     if 'eiwei' in notes:
         diet.append('little egg???')
+    if 'pesce' in notes:
+        diet.append('pescetarian')
     
     return diet
 
@@ -173,11 +175,11 @@ def edit_baby_diet(df: pd.DataFrame):
 
     # works under the assumption that diet with twins is equal!
     df['special_diet_baby_notes'] = df['food_baby1'].astype(str) + df['food_baby2'].astype(str) + df['food_baby1_notes'].astype(str) + df['food_baby2_notes'].astype(str) + df['diet_baby'].astype(str) + df['diet_baby_notes'].astype(str)
-    df['special_diet_baby'] = df.apply(baby_diet_condition, axis = 1)
+    df['special_diet_baby'] = df['special_diet_baby_notes'].apply(diet_condition)
 
     return df
 
-def replacing_values(df: pd.DataFrame):
+def replacing_values_baby(df: pd.DataFrame):
 
     replace = ['.*[Jj][Aa].*', '.*[Nn][Ee][Ii][Nn].*', '.*[Jj]eden.*', '.*[Hh]öchstens.*', '.*[Mm]ehrmal.*']
     val = ['True', 'False', 'min. once per day', 'max. once per week', 'several times a week']
@@ -212,12 +214,12 @@ def removing_duplicates(df: pd.DataFrame):
 
     return df
 
-def clean_and_edit(df: pd.DataFrame):
+def clean_and_edit_baby(df: pd.DataFrame):
     
     df = edit_baby_diet(df)
     df = edit_baby_feeding_mode(df)
     df = edit_probiotics(df)
-    df = replacing_values(df)
+    df = replacing_values_baby(df)
     df = col_type_changes(df)
     df = edit_travel_time(df)
     df = removing_duplicates(df)

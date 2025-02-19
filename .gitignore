@@ -1,4 +1,6 @@
-metadata_processing_testing.ipynb
-test.duckdb
+*.ipynb
+*.duckdb
 .gitignore
-test.duckdb.wal
+*.duckdb.wal
+testscript.py
+.DS_Store
